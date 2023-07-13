@@ -2,7 +2,6 @@ package dto
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	"github.com/gin-gonic/gin"
@@ -15,8 +14,6 @@ func ErrorResponse(err error) gin.H {
 }
 
 func BindingErrorResponse(err error, obj interface{}, tag string) gin.H {
-	fmt.Println(reflect.TypeOf(err))
-
 	if tErr, ok := err.(*json.UnmarshalTypeError); ok {
 		err = typeErrorResponse(tErr)
 	}

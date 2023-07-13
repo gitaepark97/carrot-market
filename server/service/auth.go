@@ -53,6 +53,11 @@ func (service *Service) Login(ctx context.Context, reqBody dto.LoginRequest) (dt
 		return dto.LoginResponse{}, util.NewInternalServerError(err)
 	}
 
+	err = util.CheckPassword(reqBody.Password, user.HashedPassword)
+	if err != nil {
+		return dto.LoginResponse{}, util.ErrInvalidPassword
+	}
+
 	accessToken, _, err := service.tokenMaker.CreateToken(user.UserID, service.config.AccessTokenDuration)
 	if err != nil {
 		return dto.LoginResponse{}, util.NewInternalServerError(err)

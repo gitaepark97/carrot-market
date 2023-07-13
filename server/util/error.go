@@ -25,6 +25,8 @@ var (
 	ErrDuplicateEmail    = CustomError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("email should be unique")}
 	ErrDuplicateNickname = CustomError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("nickname should be unique")}
 
+	ErrInvalidPassword = CustomError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid password")}
+
 	ErrNotFoundUser = CustomError{StatusCode: http.StatusNotFound, Err: fmt.Errorf("not found user")}
 )
 

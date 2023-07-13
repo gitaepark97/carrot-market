@@ -95,6 +95,72 @@ func TestRegister(t *testing.T) {
 				requireErrorMatch(t, recorder.Body, util.ErrEmail("email"))
 			},
 		},
+		{
+			name: "RequiredPassword",
+			body: gin.H{
+				"email":    user.Email,
+				"nickname": user.Nickname,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrRequired("password"))
+			},
+		},
+		{
+			name: "InvalidPasswordType",
+			body: gin.H{
+				"email":    user.Email,
+				"password": 1,
+				"nickname": user.Nickname,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrType("password", "string"))
+			},
+		},
+		{
+			name: "RequiredNickname",
+			body: gin.H{
+				"email":    user.Email,
+				"password": password,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrRequired("nickname"))
+			},
+		},
+		{
+			name: "InvalidNicknameType",
+			body: gin.H{
+				"email":    user.Email,
+				"password": password,
+				"nickname": 1,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					CreateUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrType("nickname", "string"))
+			},
+		},
 	}
 
 	for i := range testCases {
@@ -115,6 +181,144 @@ func TestRegister(t *testing.T) {
 			require.NoError(t, err)
 
 			url := "/api/auth/register"
+			request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
+			require.NoError(t, err)
+
+			controller.Router.ServeHTTP(recorder, request)
+			tc.checkResponse(recorder)
+		})
+	}
+}
+
+func TestLogin(t *testing.T) {
+	user, password := createRandomUser(t)
+
+	testCases := []struct {
+		name          string
+		body          gin.H
+		buildStubs    func(store *mockdb.MockStore)
+		checkResponse func(recoder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			body: gin.H{
+				"email":    user.Email,
+				"password": password,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserByEmail(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(user, nil)
+
+				store.EXPECT().
+					CreateSession(gomock.Any(), gomock.Any()).
+					Times(1).
+					Return(db.Session{}, nil)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireLoginResponseMatch(t, recorder.Body, user)
+			},
+		},
+		{
+			name: "RequiredEmail",
+			body: gin.H{
+				"password": password,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserByEmail(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrRequired("email"))
+			},
+		},
+		{
+			name: "InvalidEmailType",
+			body: gin.H{
+				"email":    1,
+				"password": password,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserByEmail(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrType("email", "string"))
+			},
+		},
+		{
+			name: "InvalidEmailFormat",
+			body: gin.H{
+				"email":    util.CreateRandomString(10),
+				"password": password,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserByEmail(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrEmail("email"))
+			},
+		},
+		{
+			name: "RequiredPassword",
+			body: gin.H{
+				"email": user.Email,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserByEmail(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrRequired("password"))
+			},
+		},
+		{
+			name: "InvalidPasswordType",
+			body: gin.H{
+				"email":    user.Email,
+				"password": 1,
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().
+					GetUserByEmail(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+				requireErrorMatch(t, recorder.Body, util.ErrType("password", "string"))
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			controller := newTestController(t, store)
+
+			tc.buildStubs(store)
+
+			recorder := httptest.NewRecorder()
+
+			data, err := json.Marshal(tc.body)
+			require.NoError(t, err)
+
+			url := "/api/auth/login"
 			request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
 			require.NoError(t, err)
 
@@ -153,4 +357,20 @@ func requireUserResponseMatch(t *testing.T, body *bytes.Buffer, user db.User) {
 	require.Equal(t, user.Nickname, rsp.Nickname)
 	require.WithinDuration(t, user.CreatedAt, rsp.CreatedAt, time.Second)
 	require.WithinDuration(t, user.UpdatedAt, rsp.UpdatedAt, time.Second)
+}
+
+func requireLoginResponseMatch(t *testing.T, body *bytes.Buffer, user db.User) {
+	data, err := io.ReadAll(body)
+	require.NoError(t, err)
+
+	var rsp dto.LoginResponse
+	err = json.Unmarshal(data, &rsp)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, rsp.AccessToken)
+	require.NotEmpty(t, rsp.RefreshToken)
+	require.Equal(t, user.Email, rsp.User.Email)
+	require.Equal(t, user.Nickname, rsp.User.Nickname)
+	require.WithinDuration(t, user.CreatedAt, rsp.User.CreatedAt, time.Second)
+	require.WithinDuration(t, user.UpdatedAt, rsp.User.UpdatedAt, time.Second)
 }
