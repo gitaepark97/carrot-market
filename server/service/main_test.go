@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	db "github.com/gitaepark/carrot-market/db/sqlc"
-	"github.com/gitaepark/carrot-market/token"
 	"github.com/gitaepark/carrot-market/util"
 	"github.com/stretchr/testify/require"
 )
@@ -14,9 +13,8 @@ func newTestService(t *testing.T, store db.Store) *Service {
 		JWTSecret: util.CreateRandomString(32),
 	}
 
-	tokenMaker, _ := token.NewJWTMaker(config.JWTSecret)
-
-	service := NewService(config, tokenMaker, store)
+	service, err := NewService(config, store)
+	require.NoError(t, err)
 
 	return service
 }

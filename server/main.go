@@ -7,7 +7,6 @@ import (
 	db "github.com/gitaepark/carrot-market/db/sqlc"
 	"github.com/gitaepark/carrot-market/loader"
 	"github.com/gitaepark/carrot-market/service"
-	"github.com/gitaepark/carrot-market/token"
 	"github.com/gitaepark/carrot-market/util"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -29,7 +28,12 @@ func main() {
 
 	store := db.NewStore(conn)
 
-	runGinServer(config, store)
+	service, err := service.NewService(config, store)
+	if err != nil {
+		log.Fatal("cannot create service: ", err)
+	}
+
+	runGinServer(service, config.HTTPServerAddress)
 }
 
 func runDBMigration(migrationURL, dbSource string) {
@@ -43,13 +47,7 @@ func runDBMigration(migrationURL, dbSource string) {
 	}
 }
 
-func runGinServer(config util.Config, store db.Store) {
-	tokenMaker, err := token.NewJWTMaker(config.JWTSecret)
-	if err != nil {
-		log.Fatal("cannot create token maker: ", err)
-	}
-
-	service := service.NewService(config, tokenMaker, store)
+func runGinServer(service *service.Service, address string) {
 	controller, err := controller.NewController(service)
 	if err != nil {
 		log.Fatal("cannot create controller: ", err)
@@ -60,7 +58,7 @@ func runGinServer(config util.Config, store db.Store) {
 		log.Fatal("cannot create server: ", err)
 	}
 
-	err = server.Start(config.HTTPServerAddress)
+	err = server.Start(address)
 	if err != nil {
 		log.Fatal("cannot start server: ", err)
 	}

@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	db "github.com/gitaepark/carrot-market/db/sqlc"
 	"github.com/gitaepark/carrot-market/service"
-	"github.com/gitaepark/carrot-market/token"
 	"github.com/gitaepark/carrot-market/util"
 	"github.com/stretchr/testify/require"
 )
@@ -20,9 +19,7 @@ func newTestController(t *testing.T, store db.Store) *Controller {
 		JWTSecret: util.CreateRandomString(32),
 	}
 
-	tokenMaker, _ := token.NewJWTMaker(config.JWTSecret)
-
-	service := service.NewService(config, tokenMaker, store)
+	service, _ := service.NewService(config, store)
 	constroller, err := NewController(service)
 	require.NoError(t, err)
 

@@ -12,12 +12,18 @@ type Service struct {
 	repository db.Store
 }
 
-func NewService(config util.Config, tokenMaker token.Maker, repository db.Store) *Service {
+func NewService(config util.Config, repository db.Store) (*Service, error) {
 	service := &Service{
 		config:     config,
-		tokenMaker: tokenMaker,
 		repository: repository,
 	}
 
-	return service
+	tokenMaker, err := token.NewJWTMaker(config.JWTSecret)
+	if err != nil {
+		return service, err
+	}
+
+	service.tokenMaker = tokenMaker
+
+	return service, nil
 }
