@@ -8,7 +8,7 @@ import (
 
 type Service struct {
 	config     util.Config
-	tokenMaker token.Maker
+	TokenMaker token.Maker
 	repository db.Store
 }
 
@@ -23,7 +23,7 @@ func NewService(config util.Config, repository db.Store) (*Service, error) {
 		return service, err
 	}
 
-	service.tokenMaker = tokenMaker
+	service.TokenMaker = tokenMaker
 
 	return service, nil
 }

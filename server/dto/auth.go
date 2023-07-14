@@ -9,7 +9,7 @@ import (
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
-	Nickname string `json:"nickname" binding:"required"`
+	Nickname string `json:"nickname" binding:"required,max=50"`
 }
 
 type UserResponse struct {
@@ -39,4 +39,12 @@ type LoginResponse struct {
 	AccessToken  string       `json:"access_token"`
 	RefreshToken string       `json:"refresh_token"`
 	User         UserResponse `json:"user"`
+}
+
+type RenewAccessTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+
+type RenewAccessTokenResponse struct {
+	AccessToken  string       `json:"access_token"`
 }

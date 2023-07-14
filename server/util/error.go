@@ -28,6 +28,12 @@ var (
 	ErrInvalidPassword = CustomError{StatusCode: http.StatusBadRequest, Err: fmt.Errorf("invalid password")}
 
 	ErrNotFoundUser = CustomError{StatusCode: http.StatusNotFound, Err: fmt.Errorf("not found user")}
+	ErrNotFoundSession = CustomError{StatusCode: http.StatusNotFound, Err: fmt.Errorf("not found session")}
+
+	ErrBlockedSession = CustomError{StatusCode: http.StatusUnauthorized, Err: fmt.Errorf("blocked session")}
+	ErrIncorrectSessionUser = CustomError{StatusCode: http.StatusUnauthorized, Err: fmt.Errorf("incorrect session user")}
+	ErrMismatchedSessionToken = CustomError{StatusCode: http.StatusUnauthorized, Err: fmt.Errorf("mismatched session token")}
+	ErrExpiredSession = CustomError{StatusCode: http.StatusUnauthorized, Err: fmt.Errorf("expired session")}
 )
 
 func ErrType(field string, fieldType string) error {
@@ -40,6 +46,10 @@ func ErrRequired(field string) error {
 
 func ErrEmail(field string) error {
 	return fmt.Errorf("%s should be email format", field)
+}
+
+func ErrMax(field string, param string) error {
+	return fmt.Errorf("%s's length should be smaller than or equals to %s", field, param)
 }
 
 func NewInternalServerError(err error) CustomError {

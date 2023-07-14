@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	db "github.com/gitaepark/carrot-market/db/sqlc"
 	"github.com/gitaepark/carrot-market/dto"
@@ -10,10 +11,11 @@ import (
 	"github.com/lib/pq"
 )
 
-func (service *Service) Register(ctx context.Context, reqBody dto.RegisterRequest) (dto.UserResponse, util.CustomError) {
+func (service *Service) Register(ctx context.Context, reqBody dto.RegisterRequest) (rsp dto.UserResponse, cErr util.CustomError) {
 	hashedPassword, err := util.HashPassword(reqBody.Password)
 	if err != nil {
-		return dto.UserResponse{}, util.NewInternalServerError(err)
+		cErr = util.NewInternalServerError(err)
+		return
 	}
 
 	arg := db.CreateUserParams{
@@ -28,44 +30,51 @@ func (service *Service) Register(ctx context.Context, reqBody dto.RegisterReques
 			if pqErr.Code.Name() == util.DB_UK_ERROR.Name {
 				switch pqErr.Constraint {
 				case util.DB_UK_USER_EMAIL:
-					return dto.UserResponse{}, util.ErrDuplicateEmail
+					cErr = util.ErrDuplicateEmail
+					return
 				case util.DB_UK_USER_NICKNAME:
-					return dto.UserResponse{}, util.ErrDuplicateNickname
+					cErr = util.ErrDuplicateNickname
+					return
 				}
 			}
 		}
 
-		return dto.UserResponse{}, util.NewInternalServerError(err)
+		cErr = util.NewInternalServerError(err)
+		return
 	}
 
-	rsp := dto.NewUserResponse(user)
-
-	return rsp, util.CustomError{}
+	rsp = dto.NewUserResponse(user)
+	return
 }
 
-func (service *Service) Login(ctx context.Context, reqBody dto.LoginRequest) (dto.LoginResponse, util.CustomError) {
+func (service *Service) Login(ctx context.Context, reqBody dto.LoginRequest) (rsp dto.LoginResponse, cErr util.CustomError) {
 	user, err := service.repository.GetUserByEmail(ctx, reqBody.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return dto.LoginResponse{}, util.ErrNotFoundUser
+			cErr = util.ErrNotFoundUser
+			return
 		}
 
-		return dto.LoginResponse{}, util.NewInternalServerError(err)
+		cErr = util.NewInternalServerError(err)
+		return
 	}
 
 	err = util.CheckPassword(reqBody.Password, user.HashedPassword)
 	if err != nil {
-		return dto.LoginResponse{}, util.ErrInvalidPassword
+		cErr = util.ErrInvalidPassword
+		return
 	}
 
-	accessToken, _, err := service.tokenMaker.CreateToken(user.UserID, service.config.AccessTokenDuration)
+	accessToken, _, err := service.TokenMaker.CreateToken(user.UserID, service.config.AccessTokenDuration)
 	if err != nil {
-		return dto.LoginResponse{}, util.NewInternalServerError(err)
+		cErr = util.NewInternalServerError(err)
+		return
 	}
 
-	refreshToken, refreshPayload, err := service.tokenMaker.CreateToken(user.UserID, service.config.RefreshTokenDuration)
+	refreshToken, refreshPayload, err := service.TokenMaker.CreateToken(user.UserID, service.config.RefreshTokenDuration)
 	if err != nil {
-		return dto.LoginResponse{}, util.NewInternalServerError(err)
+		cErr = util.NewInternalServerError(err)
+		return
 	}
 
 	arg := db.CreateSessionParams{
@@ -76,14 +85,61 @@ func (service *Service) Login(ctx context.Context, reqBody dto.LoginRequest) (dt
 
 	_, err = service.repository.CreateSession(ctx, arg)
 	if err != nil {
-		return dto.LoginResponse{}, util.NewInternalServerError(err)
+		cErr = util.NewInternalServerError(err)
+		return
 	}
 
-	rsp := dto.LoginResponse{
+	rsp = dto.LoginResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User:         dto.NewUserResponse(user),
 	}
+	return
+}
 
-	return rsp, util.CustomError{}
+func (service *Service) RenewAccessToken(ctx context.Context, reqBody dto.RenewAccessTokenRequest) (rsp dto.RenewAccessTokenResponse, cErr util.CustomError) {
+	refreshPayload, err := service.TokenMaker.VerifyToken(reqBody.RefreshToken)
+	if err != nil {
+		cErr = util.NewInternalServerError(err)
+		return
+	}
+
+	session, err := service.repository.GetSession(ctx, refreshPayload.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			cErr = util.ErrNotFoundSession
+			return
+		}
+
+		cErr = util.NewInternalServerError(err)
+		return
+	}
+
+	if session.IsBlocked {
+		cErr = util.ErrBlockedSession
+		return
+	}
+	if session.UserID != refreshPayload.UserID {
+		cErr = util.ErrIncorrectSessionUser
+		return
+	}
+	if session.RefreshToken != reqBody.RefreshToken {
+		cErr = util.ErrMismatchedSessionToken
+		return
+	}
+	if time.Now().After(session.ExpiredAt) {
+		cErr = util.ErrExpiredSession
+		return
+	}
+
+	accessToken, _, err := service.TokenMaker.CreateToken(refreshPayload.UserID, service.config.AccessTokenDuration)
+	if err != nil {
+		cErr = util.NewInternalServerError(err)
+		return
+	}
+
+	rsp = dto.RenewAccessTokenResponse{
+		AccessToken: accessToken,
+	}
+	return
 }
