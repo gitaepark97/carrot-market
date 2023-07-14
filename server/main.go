@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/gitaepark/carrot-market/controller"
@@ -21,7 +20,7 @@ func main() {
 		log.Fatal("cannot load config: ", err)
 	}
 
-	conn, err := sql.Open(config.DBDriver, config.DBSource)
+	conn, err := loader.ConnectDB(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal("cannto connect to db: ", err)
 	}
