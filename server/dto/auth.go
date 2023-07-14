@@ -23,8 +23,8 @@ func NewUserResponse(user db.User) UserResponse {
 	userResponse := UserResponse{
 		Email:     user.Email,
 		Nickname:  user.Nickname,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		CreatedAt: user.CreatedAt.Local(),
+		UpdatedAt: user.UpdatedAt.Local(),
 	}
 
 	return userResponse
