@@ -17,8 +17,8 @@ import (
 
 func newTestController(t *testing.T, store db.Store) *Controller {
 	config := util.Config{
-		JWTSecret: util.CreateRandomString(32),
-		AccessTokenDuration: time.Minute,
+		JWTSecret:            util.CreateRandomString(32),
+		AccessTokenDuration:  time.Minute,
 		RefreshTokenDuration: time.Minute,
 	}
 

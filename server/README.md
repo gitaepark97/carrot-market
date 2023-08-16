@@ -71,7 +71,7 @@
   make db_docs
   ```
 
-- Access the DB documentation at [this address](https://dbdocs.io/hugodfbec4a9c6/hr_monitor?schema=public&view=table_structure&table=acts).
+- Access the DB documentation at [this address](https://dbdocs.io/parkkitae7/carrot_market).
 
 ### How to generate code
 

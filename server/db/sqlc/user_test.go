@@ -47,7 +47,7 @@ func TestUpdateUser(t *testing.T) {
 	user, _ := createRandomUser(t)
 
 	arg := UpdateUserParams{
-		Nickname: util.CreateRandomNickname(),
+		Nickname: util.CreateRandomString(6),
 		UserID:   user.UserID,
 	}
 
@@ -65,13 +65,13 @@ func TestUpdateUser(t *testing.T) {
 }
 
 func createRandomUser(t *testing.T) (User, string) {
-	password := util.CreateRandomPassword()
+	password := util.CreateRandomString(10)
 	hashedPassword, _ := util.HashPassword(password)
 
 	arg := CreateUserParams{
 		Email:          util.CreateRandomEmail(),
 		HashedPassword: hashedPassword,
-		Nickname:       util.CreateRandomNickname(),
+		Nickname:       util.CreateRandomString(6),
 	}
 
 	user, err := testQueries.CreateUser(context.Background(), arg)
@@ -83,8 +83,8 @@ func createRandomUser(t *testing.T) (User, string) {
 	require.Equal(t, arg.HashedPassword, user.HashedPassword)
 	require.Equal(t, arg.Nickname, user.Nickname)
 	require.Equal(t, arg.Email, user.Email)
-	require.NotZero(t, user.UpdatedAt)
 	require.NotZero(t, user.CreatedAt)
+	require.NotZero(t, user.UpdatedAt)
 
 	return user, password
 }

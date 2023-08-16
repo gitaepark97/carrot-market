@@ -25,5 +25,6 @@ func (controller *Controller) setupRouter() {
 
 	controller.Router = router
 
-	controller.setAuthRouter()
+	controller.setAuthRoutes()
+	controller.setGoodsRoutes()
 }

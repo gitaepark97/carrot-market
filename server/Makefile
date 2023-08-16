@@ -35,11 +35,12 @@ server:
 
 sqlc:
 	sqlc generate
-
-test:
-	go test -v -cover ./...
+	mockgen -package mockdb -destination db/mock/store.go github.com/gitaepark/carrot-market/db/sqlc Store
 
 mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/gitaepark/carrot-market/db/sqlc Store
 
-.PHONY: network postgres createdb dropdb migrateup migrateup1 migratedown migratedown1 db_docs db_schema server sqlc test mock
+test:
+	go test -v -cover ./...
+
+.PHONY: network postgres createdb dropdb migrateup migrateup1 migratedown migratedown1 db_docs db_schema server sqlc mock test

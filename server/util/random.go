@@ -38,11 +38,3 @@ func CreateRandomString(n int) string {
 func CreateRandomEmail() string {
 	return fmt.Sprintf("%s@email.com", CreateRandomString(6))
 }
-
-func CreateRandomPassword() string {
-	return CreateRandomString(10)
-}
-
-func CreateRandomNickname() string {
-	return CreateRandomString(6)
-}

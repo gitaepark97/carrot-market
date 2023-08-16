@@ -20,6 +20,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var userAgent string
+var clientIp string
+
+func init() {
+	userAgent = uarand.GetRandom()
+	buf := make([]byte, 4)
+	ip := rand.Uint32()
+	binary.LittleEndian.PutUint32(buf, ip)
+	clientIp = net.IP(buf).To4().String()
+}
+
 func TestRegister(t *testing.T) {
 	user, password := createRandomUser(t)
 
@@ -62,7 +73,7 @@ func TestRegister(t *testing.T) {
 			},
 			checkResponse: func(rsp dto.UserResponse, err util.CustomError) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.NewInternalServerError(sql.ErrConnDone))
+				requireMatchError(t, err, util.NewInternalServerError(sql.ErrConnDone))
 			},
 		},
 		{
@@ -80,7 +91,7 @@ func TestRegister(t *testing.T) {
 			},
 			checkResponse: func(rsp dto.UserResponse, err util.CustomError) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrDuplicateEmail)
+				requireMatchError(t, err, util.ErrDuplicateEmail)
 			},
 		},
 		{
@@ -98,7 +109,7 @@ func TestRegister(t *testing.T) {
 			},
 			checkResponse: func(rsp dto.UserResponse, err util.CustomError) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrDuplicateNickname)
+				requireMatchError(t, err, util.ErrDuplicateNickname)
 			},
 		},
 	}
@@ -170,7 +181,7 @@ func TestLogin(t *testing.T) {
 			},
 			checkResponse: func(rsp dto.LoginResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.NewInternalServerError(sql.ErrConnDone))
+				requireMatchError(t, err, util.NewInternalServerError(sql.ErrConnDone))
 			},
 		},
 		{
@@ -191,14 +202,14 @@ func TestLogin(t *testing.T) {
 			},
 			checkResponse: func(rsp dto.LoginResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrNotFoundUser)
+				requireMatchError(t, err, util.ErrNotFoundUser)
 			},
 		},
 		{
 			name: "InvalidPassword",
 			reqBody: dto.LoginRequest{
 				Email:    user.Email,
-				Password: util.CreateRandomPassword(),
+				Password: util.CreateRandomString(10),
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -212,7 +223,7 @@ func TestLogin(t *testing.T) {
 			},
 			checkResponse: func(rsp dto.LoginResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrInvalidPassword)
+				requireMatchError(t, err, util.ErrInvalidPassword)
 			},
 		},
 	}
@@ -229,7 +240,7 @@ func TestLogin(t *testing.T) {
 
 			tc.buildStubs(store)
 
-			rsp, err := service.Login(context.Background(), tc.reqBody)
+			rsp, err := service.Login(context.Background(), tc.reqBody, userAgent, clientIp)
 			tc.checkResponse(rsp, err, service.TokenMaker)
 		})
 	}
@@ -253,18 +264,18 @@ func TestRenewAccessToken(t *testing.T) {
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) db.Session {
 				arg := randomSessionParams{
-					UserID: user.UserID,
-					Duration: time.Minute,
+					UserID:    user.UserID,
+					Duration:  time.Minute,
 					IsBlocked: false,
 				}
-				
+
 				session := createRandomSession(t, tokenMaker, arg)
 
 				store.EXPECT().
 					GetSession(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(session, nil)
-				
+
 				return session
 			},
 			checkResponse: func(rsp dto.RenewAccessTokenResponse, err util.CustomError, tokenMaker token.Maker) {
@@ -281,23 +292,23 @@ func TestRenewAccessToken(t *testing.T) {
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) db.Session {
 				arg := randomSessionParams{
-					UserID: user.UserID,
-					Duration: time.Minute,
+					UserID:    user.UserID,
+					Duration:  time.Minute,
 					IsBlocked: false,
 				}
-				
+
 				session := createRandomSession(t, tokenMaker, arg)
 
 				store.EXPECT().
 					GetSession(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(db.Session{}, sql.ErrConnDone)
-				
+
 				return session
 			},
 			checkResponse: func(rsp dto.RenewAccessTokenResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.NewInternalServerError(sql.ErrConnDone))
+				requireMatchError(t, err, util.NewInternalServerError(sql.ErrConnDone))
 			},
 		},
 		{
@@ -309,23 +320,23 @@ func TestRenewAccessToken(t *testing.T) {
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) db.Session {
 				arg := randomSessionParams{
-					UserID: user.UserID,
-					Duration: time.Minute,
+					UserID:    user.UserID,
+					Duration:  time.Minute,
 					IsBlocked: true,
 				}
-				
+
 				session := createRandomSession(t, tokenMaker, arg)
 
 				store.EXPECT().
 					GetSession(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(session, nil)
-				
+
 				return session
 			},
 			checkResponse: func(rsp dto.RenewAccessTokenResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrBlockedSession)
+				requireMatchError(t, err, util.ErrBlockedSession)
 			},
 		},
 		{
@@ -337,11 +348,11 @@ func TestRenewAccessToken(t *testing.T) {
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) db.Session {
 				arg := randomSessionParams{
-					UserID: user.UserID,
-					Duration: time.Minute,
+					UserID:    user.UserID,
+					Duration:  time.Minute,
 					IsBlocked: false,
 				}
-				
+
 				session := createRandomSession(t, tokenMaker, arg)
 				session.UserID = 0
 
@@ -349,12 +360,12 @@ func TestRenewAccessToken(t *testing.T) {
 					GetSession(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(session, nil)
-				
+
 				return session
 			},
 			checkResponse: func(rsp dto.RenewAccessTokenResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrIncorrectSessionUser)
+				requireMatchError(t, err, util.ErrIncorrectSessionUser)
 			},
 		},
 		{
@@ -366,11 +377,11 @@ func TestRenewAccessToken(t *testing.T) {
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) db.Session {
 				arg := randomSessionParams{
-					UserID: user.UserID,
-					Duration: time.Minute,
+					UserID:    user.UserID,
+					Duration:  time.Minute,
 					IsBlocked: false,
 				}
-				
+
 				session1 := createRandomSession(t, tokenMaker, arg)
 				session2 := createRandomSession(t, tokenMaker, arg)
 
@@ -378,12 +389,12 @@ func TestRenewAccessToken(t *testing.T) {
 					GetSession(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(session1, nil)
-				
+
 				return session2
 			},
 			checkResponse: func(rsp dto.RenewAccessTokenResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrMismatchedSessionToken)
+				requireMatchError(t, err, util.ErrMismatchedSessionToken)
 			},
 		},
 		{
@@ -395,23 +406,23 @@ func TestRenewAccessToken(t *testing.T) {
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) db.Session {
 				arg := randomSessionParams{
-					UserID: 0,
-					Duration: -time.Minute,
+					UserID:    0,
+					Duration:  -time.Minute,
 					IsBlocked: false,
 				}
-				
+
 				session := createRandomSession(t, tokenMaker, arg)
 
 				store.EXPECT().
 					GetSession(gomock.Any(), gomock.Any()).
 					Times(1).
 					Return(session, nil)
-				
+
 				return session
 			},
 			checkResponse: func(rsp dto.RenewAccessTokenResponse, err util.CustomError, tokenMaker token.Maker) {
 				require.Empty(t, rsp)
-				requireErrorMatch(t, err, util.ErrExpiredSession)
+				requireMatchError(t, err, util.ErrExpiredSession)
 			},
 		},
 	}
@@ -435,14 +446,14 @@ func TestRenewAccessToken(t *testing.T) {
 }
 
 func createRandomUser(t *testing.T) (db.User, string) {
-	password := util.CreateRandomPassword()
+	password := util.CreateRandomString(10)
 	hashedPassword, _ := util.HashPassword(password)
 
 	user := db.User{
 		UserID:         util.CreateRandomInt32(1, 30),
 		Email:          util.CreateRandomEmail(),
 		HashedPassword: hashedPassword,
-		Nickname:       util.CreateRandomNickname(),
+		Nickname:       util.CreateRandomString(6),
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -469,37 +480,28 @@ func requireMatchLoginResponse(t *testing.T, rsp dto.LoginResponse, tokenMaker t
 	require.WithinDuration(t, rsp.User.CreatedAt, user.CreatedAt, time.Second)
 	require.WithinDuration(t, rsp.User.UpdatedAt, user.UpdatedAt, time.Second)
 
-	
 }
 
 type randomSessionParams struct {
-	UserID 		int32
-	Duration 	time.Duration
+	UserID    int32
+	Duration  time.Duration
 	IsBlocked bool
 }
 
 func createRandomSession(t *testing.T, tokenMaker token.Maker, args randomSessionParams) db.Session {
 	tokenDuration := time.Minute
-	
+
 	token, payload, _ := tokenMaker.CreateToken(args.UserID, tokenDuration)
 
-	userAgent := uarand.GetRandom()
-	buf := make([]byte, 4)
-	ip := rand.Uint32()
-	binary.LittleEndian.PutUint32(buf, ip)
-	clientIp := net.IP(buf).To4().String()
-
-	session := db.Session{
-		SessionID: payload.ID,
-		UserID: args.UserID,
+	return db.Session{
+		SessionID:    payload.ID,
+		UserID:       args.UserID,
 		RefreshToken: token,
-		UserAgent: userAgent,
-		ClientIp: clientIp,
-		IsBlocked: args.IsBlocked,
-		ExpiredAt: time.Now().Add(args.Duration),
+		UserAgent:    userAgent,
+		ClientIp:     clientIp,
+		IsBlocked:    args.IsBlocked,
+		ExpiredAt:    time.Now().Add(args.Duration),
 	}
-
-	return session
 }
 
 func requireMatchRenewAccessTokenResponse(t *testing.T, rsp dto.RenewAccessTokenResponse, tokenMaker token.Maker, userID int32) {

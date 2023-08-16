@@ -11,8 +11,8 @@ import (
 
 func newTestService(t *testing.T, store db.Store) *Service {
 	config := util.Config{
-		JWTSecret: util.CreateRandomString(32),
-		AccessTokenDuration: time.Minute,
+		JWTSecret:            util.CreateRandomString(32),
+		AccessTokenDuration:  time.Minute,
 		RefreshTokenDuration: time.Minute,
 	}
 
@@ -22,6 +22,6 @@ func newTestService(t *testing.T, store db.Store) *Service {
 	return service
 }
 
-func requireErrorMatch(t *testing.T, err, expectErr util.CustomError) {
+func requireMatchError(t *testing.T, err, expectErr util.CustomError) {
 	require.Equal(t, err, expectErr)
 }

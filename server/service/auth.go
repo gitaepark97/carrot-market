@@ -47,7 +47,7 @@ func (service *Service) Register(ctx context.Context, reqBody dto.RegisterReques
 	return
 }
 
-func (service *Service) Login(ctx context.Context, reqBody dto.LoginRequest) (rsp dto.LoginResponse, cErr util.CustomError) {
+func (service *Service) Login(ctx context.Context, reqBody dto.LoginRequest, userAgent, clientIp string) (rsp dto.LoginResponse, cErr util.CustomError) {
 	user, err := service.repository.GetUserByEmail(ctx, reqBody.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -81,6 +81,10 @@ func (service *Service) Login(ctx context.Context, reqBody dto.LoginRequest) (rs
 		SessionID:    refreshPayload.ID,
 		UserID:       user.UserID,
 		RefreshToken: refreshToken,
+		UserAgent:    userAgent,
+		ClientIp:     clientIp,
+		IsBlocked:    false,
+		ExpiredAt:    refreshPayload.ExpiredAt,
 	}
 
 	_, err = service.repository.CreateSession(ctx, arg)

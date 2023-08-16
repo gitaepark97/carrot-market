@@ -362,8 +362,8 @@ func TestRenewAccessToken(t *testing.T) {
 		{
 			name: "OK",
 			body: func(refreshToken string) gin.H {
-					return gin.H{
-					"refresh_token":    refreshToken,
+				return gin.H{
+					"refresh_token": refreshToken,
 				}
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) string {
@@ -376,13 +376,13 @@ func TestRenewAccessToken(t *testing.T) {
 				clientIp := net.IP(buf).To4().String()
 
 				session := db.Session{
-					SessionID: payload.ID,
-					UserID: user.UserID,
+					SessionID:    payload.ID,
+					UserID:       user.UserID,
 					RefreshToken: token,
-					UserAgent: userAgent,
-					ClientIp: clientIp,
-					IsBlocked: false,
-					ExpiredAt: time.Now().Add(time.Minute),
+					UserAgent:    userAgent,
+					ClientIp:     clientIp,
+					IsBlocked:    false,
+					ExpiredAt:    time.Now().Add(time.Minute),
 				}
 
 				store.EXPECT().
@@ -398,9 +398,9 @@ func TestRenewAccessToken(t *testing.T) {
 			},
 		},
 		{
-			name: "OK",
+			name: "RequiredRefreshToken",
 			body: func(refreshToken string) gin.H {
-					return gin.H{}
+				return gin.H{}
 			},
 			buildStubs: func(tokenMaker token.Maker, store *mockdb.MockStore) string {
 				token, _, _ := tokenMaker.CreateToken(user.UserID, time.Minute)
@@ -446,14 +446,14 @@ func TestRenewAccessToken(t *testing.T) {
 }
 
 func createRandomUser(t *testing.T) (db.User, string) {
-	password := util.CreateRandomPassword()
+	password := util.CreateRandomString(10)
 	hashedPassword, _ := util.HashPassword(password)
 
 	user := db.User{
 		UserID:         util.CreateRandomInt32(1, 30),
 		Email:          util.CreateRandomEmail(),
 		HashedPassword: hashedPassword,
-		Nickname:       util.CreateRandomNickname(),
+		Nickname:       util.CreateRandomString(6),
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}

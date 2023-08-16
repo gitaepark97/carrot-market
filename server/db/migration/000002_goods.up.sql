@@ -1,26 +1,6 @@
--- SQL dump generated using DBML (dbml-lang.org)
--- Database: PostgreSQL
--- Generated at: 2023-07-19T02:10:20.651Z
+ALTER TABLE sessions ALTER COLUMN user_id DROP DEFAULT;
 
-CREATE TABLE "users" (
-  "user_id" serial PRIMARY KEY,
-  "email" varchar(50) UNIQUE NOT NULL,
-  "hashed_password" varchar NOT NULL,
-  "nickname" varchar(50) UNIQUE NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT (now()),
-  "updated_at" timestamptz NOT NULL DEFAULT (now())
-);
-
-CREATE TABLE "sessions" (
-  "session_id" uuid PRIMARY KEY,
-  "user_id" int NOT NULL,
-  "refresh_token" varchar NOT NULL,
-  "user_agent" varchar NOT NULL,
-  "client_ip" varchar NOT NULL,
-  "is_blocked" boolean NOT NULL DEFAULT (false),
-  "expired_at" timestamptz NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT (now())
-);
+ALTER TABLE sessions ALTER COLUMN user_id TYPE int;
 
 CREATE TABLE "goods" (
   "goods_id" serial PRIMARY KEY,
@@ -56,12 +36,32 @@ CREATE TABLE "goods_images" (
 
 CREATE INDEX ON "goods_images" ("goods_id", "image_url");
 
-ALTER TABLE "sessions" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE CASCADE;
-
 ALTER TABLE "goods" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("user_id") ON DELETE CASCADE;
-
-ALTER TABLE "goods_categories" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("category_id");
 
 ALTER TABLE "goods_categories" ADD FOREIGN KEY ("goods_id") REFERENCES "goods" ("goods_id") ON DELETE CASCADE;
 
+ALTER TABLE "goods_categories" ADD FOREIGN KEY ("category_id") REFERENCES "categories" ("category_id");
+
 ALTER TABLE "goods_images" ADD FOREIGN KEY ("goods_id") REFERENCES "goods" ("goods_id") ON DELETE CASCADE;
+
+INSERT INTO categories(
+  title
+) VALUES
+  ('디지털 기기'),
+  ('가구/인테리어'),
+  ('유아동'),
+  ('여성의류'),
+  ('여성잡화'),
+  ('남성패션/잡화'),
+  ('생활가전'),
+  ('생활/주방'),
+  ('가공식품'),
+  ('스포츠/레저'),
+  ('취미/게임/음반'),
+  ('뷰티/미용'),
+  ('식물'),
+  ('반려동물용품'),
+  ('티켓/교환권'),
+  ('도서'),
+  ('유아도서'),
+  ('기타 중고물품');

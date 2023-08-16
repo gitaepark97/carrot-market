@@ -43,6 +43,8 @@ func validatorErrorResponse(err validator.ValidationErrors, obj interface{}, tag
 		vErr = util.ErrEmail(tagName)
 	case "max":
 		vErr = util.ErrMax(tagName, err[0].Param())
+	case "gte":
+		vErr = util.ErrGte(tagName, err[0].Param())
 	default:
 		vErr = err
 	}
